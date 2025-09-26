@@ -11,7 +11,7 @@ prosemirror-commands 是 ProseMirror 编辑器中负责**“行为”**的核心
 每个导出的命令都是一个函数，遵循 `(state, dispatch, view) => boolean` 的签名：
 
 - `state: EditorState`: 当前的编辑器状态。命令会根据这个状态来判断自己是否适用。
-- `dispatch?: (tr: Transaction) => void`: 一个可选的回调函数。如果提供了 `dispatch`，命令在执行成功后会调用它，传入一个描述了变化的 `Transaction`。如果**没有**提供 `dispatch`，命令只进行“空运行 (dry run)”，即只判断自己是否适用，而不产生任何实际效果。这是实现“动态禁用/启用菜单项”等 UI 功能的关键。
+- `dispatch?: (tr: Transaction) => void`: 一个可选的回调函数。如果提供了 `dispatch`，命令在执行成功后会调用它，传入一个描述了变化的 `Transaction`。如果**没有**提供 `dispatch`，命令只进行`“空运行 (dry run)”，即只判断自己是否适用，而不产生任何实际效果`。这是实现“动态禁用/启用菜单项”等 UI 功能的关键。
 - `view?: EditorView`: 可选的编辑器视图实例，某些命令需要它来获取精确的 DOM 布局信息（例如，判断光标是否真的在文本块的视觉开头）。
 - **返回值 `boolean`**: 如果命令成功执行（或在空运行时发现自己适用），则返回 `true`；否则返回 `false`。
 

@@ -1,9 +1,34 @@
-import {joinPoint, canJoin, findWrapping, liftTarget, canSplit,
-        ReplaceStep, ReplaceAroundStep, replaceStep} from "prosemirror-transform"
-import {Slice, Fragment, Node, NodeType, Attrs, MarkType, ResolvedPos, ContentMatch} from "prosemirror-model"
-import {Selection, EditorState, Transaction, TextSelection, NodeSelection,
-        SelectionRange, AllSelection, Command} from "prosemirror-state"
-import {EditorView} from "prosemirror-view"
+import {
+  joinPoint,
+  canJoin,
+  findWrapping,
+  liftTarget,
+  canSplit,
+  ReplaceStep,
+  ReplaceAroundStep,
+  replaceStep
+} from 'prosemirror-transform'
+import {
+  Slice,
+  Fragment,
+  Node,
+  NodeType,
+  Attrs,
+  MarkType,
+  ResolvedPos,
+  ContentMatch
+} from 'prosemirror-model'
+import {
+  Selection,
+  EditorState,
+  Transaction,
+  TextSelection,
+  NodeSelection,
+  SelectionRange,
+  AllSelection,
+  Command
+} from 'prosemirror-state'
+import { EditorView } from 'prosemirror-view'
 
 /// Delete the selection, if there is one.
 export const deleteSelection: Command = (state, dispatch) => {
@@ -13,9 +38,8 @@ export const deleteSelection: Command = (state, dispatch) => {
 }
 
 function atBlockStart(state: EditorState, view?: EditorView): ResolvedPos | null {
-  let {$cursor} = state.selection as TextSelection
-  if (!$cursor || (view ? !view.endOfTextblock("backward", state)
-                        : $cursor.parentOffset > 0))
+  let { $cursor } = state.selection as TextSelection
+  if (!$cursor || (view ? !view.endOfTextblock('backward', state) : $cursor.parentOffset > 0))
     return null
   return $cursor
 }
@@ -35,7 +59,8 @@ export const joinBackward: Command = (state, dispatch, view) => {
 
   // If there is no node before this, try to lift
   if (!$cut) {
-    let range = $cursor.blockRange(), target = range && liftTarget(range)
+    let range = $cursor.blockRange(),
+      target = range && liftTarget(range)
     if (target == null) return false
     if (dispatch) dispatch(state.tr.lift(range!, target).scrollIntoView())
     return true
@@ -47,16 +72,24 @@ export const joinBackward: Command = (state, dispatch, view) => {
 
   // If the node below has no content and the node above is
   // selectable, delete the node below and select the one above.
-  if ($cursor.parent.content.size == 0 &&
-      (textblockAt(before, "end") || NodeSelection.isSelectable(before))) {
-    for (let depth = $cursor.depth;; depth--) {
+  if (
+    $cursor.parent.content.size == 0 &&
+    (textblockAt(before, 'end') || NodeSelection.isSelectable(before))
+  ) {
+    for (let depth = $cursor.depth; ; depth--) {
       let delStep = replaceStep(state.doc, $cursor.before(depth), $cursor.after(depth), Slice.empty)
-      if (delStep && (delStep as ReplaceStep).slice.size < (delStep as ReplaceStep).to - (delStep as ReplaceStep).from) {
+      if (
+        delStep &&
+        (delStep as ReplaceStep).slice.size <
+          (delStep as ReplaceStep).to - (delStep as ReplaceStep).from
+      ) {
         if (dispatch) {
           let tr = state.tr.step(delStep)
-          tr.setSelection(textblockAt(before, "end")
-            ? Selection.findFrom(tr.doc.resolve(tr.mapping.map($cut.pos, -1)), -1)!
-            : NodeSelection.create(tr.doc, $cut.pos - before.nodeSize))
+          tr.setSelection(
+            textblockAt(before, 'end')
+              ? Selection.findFrom(tr.doc.resolve(tr.mapping.map($cut.pos, -1)), -1)!
+              : NodeSelection.create(tr.doc, $cut.pos - before.nodeSize)
+          )
           dispatch(tr.scrollIntoView())
         }
         return true
@@ -94,15 +127,23 @@ export const joinTextblockForward: Command = (state, dispatch, view) => {
   return $cut ? joinTextblocksAround(state, $cut, dispatch) : false
 }
 
-function joinTextblocksAround(state: EditorState, $cut: ResolvedPos, dispatch?: (tr: Transaction) => void) {
-  let before = $cut.nodeBefore!, beforeText = before, beforePos = $cut.pos - 1
+function joinTextblocksAround(
+  state: EditorState,
+  $cut: ResolvedPos,
+  dispatch?: (tr: Transaction) => void
+) {
+  let before = $cut.nodeBefore!,
+    beforeText = before,
+    beforePos = $cut.pos - 1
   for (; !beforeText.isTextblock; beforePos--) {
     if (beforeText.type.spec.isolating) return false
     let child = beforeText.lastChild
     if (!child) return false
     beforeText = child
   }
-  let after = $cut.nodeAfter!, afterText = after, afterPos = $cut.pos + 1
+  let after = $cut.nodeAfter!,
+    afterText = after,
+    afterPos = $cut.pos + 1
   for (; !afterText.isTextblock; afterPos++) {
     if (afterText.type.spec.isolating) return false
     let child = afterText.firstChild
@@ -110,19 +151,26 @@ function joinTextblocksAround(state: EditorState, $cut: ResolvedPos, dispatch?: 
     afterText = child
   }
   let step = replaceStep(state.doc, beforePos, afterPos, Slice.empty) as ReplaceStep | null
-  if (!step || step.from != beforePos ||
-      step instanceof ReplaceStep && step.slice.size >= afterPos - beforePos) return false
+  if (
+    !step ||
+    step.from != beforePos ||
+    (step instanceof ReplaceStep && step.slice.size >= afterPos - beforePos)
+  )
+    return false
   if (dispatch) {
     let tr = state.tr.step(step)
     tr.setSelection(TextSelection.create(tr.doc, beforePos))
     dispatch(tr.scrollIntoView())
   }
   return true
-
 }
 
-function textblockAt(node: Node, side: "start" | "end", only = false) {
-  for (let scan: Node | null = node; scan; scan = (side == "start" ? scan.firstChild : scan.lastChild)) {
+function textblockAt(node: Node, side: 'start' | 'end', only = false) {
+  for (
+    let scan: Node | null = node;
+    scan;
+    scan = side == 'start' ? scan.firstChild : scan.lastChild
+  ) {
     if (scan.isTextblock) return true
     if (only && scan.childCount != 1) return false
   }
@@ -136,32 +184,42 @@ function textblockAt(node: Node, side: "start" | "end", only = false) {
 /// commands, as a fall-back behavior when the schema doesn't allow
 /// deletion at the selected point.
 export const selectNodeBackward: Command = (state, dispatch, view) => {
-  let {$head, empty} = state.selection, $cut: ResolvedPos | null = $head
+  let { $head, empty } = state.selection,
+    $cut: ResolvedPos | null = $head
   if (!empty) return false
 
   if ($head.parent.isTextblock) {
-    if (view ? !view.endOfTextblock("backward", state) : $head.parentOffset > 0) return false
+    if (view ? !view.endOfTextblock('backward', state) : $head.parentOffset > 0) return false
     $cut = findCutBefore($head)
   }
   let node = $cut && $cut.nodeBefore
   if (!node || !NodeSelection.isSelectable(node)) return false
   if (dispatch)
-    dispatch(state.tr.setSelection(NodeSelection.create(state.doc, $cut!.pos - node.nodeSize)).scrollIntoView())
+    dispatch(
+      state.tr
+        .setSelection(NodeSelection.create(state.doc, $cut!.pos - node.nodeSize))
+        .scrollIntoView()
+    )
   return true
 }
 
 function findCutBefore($pos: ResolvedPos): ResolvedPos | null {
-  if (!$pos.parent.type.spec.isolating) for (let i = $pos.depth - 1; i >= 0; i--) {
-    if ($pos.index(i) > 0) return $pos.doc.resolve($pos.before(i + 1))
-    if ($pos.node(i).type.spec.isolating) break
-  }
+  if (!$pos.parent.type.spec.isolating)
+    for (let i = $pos.depth - 1; i >= 0; i--) {
+      if ($pos.index(i) > 0) return $pos.doc.resolve($pos.before(i + 1))
+      if ($pos.node(i).type.spec.isolating) break
+    }
   return null
 }
 
 function atBlockEnd(state: EditorState, view?: EditorView): ResolvedPos | null {
-  let {$cursor} = state.selection as TextSelection
-  if (!$cursor || (view ? !view.endOfTextblock("forward", state)
-                        : $cursor.parentOffset < $cursor.parent.content.size))
+  let { $cursor } = state.selection as TextSelection
+  if (
+    !$cursor ||
+    (view
+      ? !view.endOfTextblock('forward', state)
+      : $cursor.parentOffset < $cursor.parent.content.size)
+  )
     return null
   return $cursor
 }
@@ -185,14 +243,23 @@ export const joinForward: Command = (state, dispatch, view) => {
 
   // If the node above has no content and the node below is
   // selectable, delete the node above and select the one below.
-  if ($cursor.parent.content.size == 0 &&
-      (textblockAt(after, "start") || NodeSelection.isSelectable(after))) {
+  if (
+    $cursor.parent.content.size == 0 &&
+    (textblockAt(after, 'start') || NodeSelection.isSelectable(after))
+  ) {
     let delStep = replaceStep(state.doc, $cursor.before(), $cursor.after(), Slice.empty)
-    if (delStep && (delStep as ReplaceStep).slice.size < (delStep as ReplaceStep).to - (delStep as ReplaceStep).from) {
+    if (
+      delStep &&
+      (delStep as ReplaceStep).slice.size <
+        (delStep as ReplaceStep).to - (delStep as ReplaceStep).from
+    ) {
       if (dispatch) {
         let tr = state.tr.step(delStep)
-        tr.setSelection(textblockAt(after, "start") ? Selection.findFrom(tr.doc.resolve(tr.mapping.map($cut.pos)), 1)!
-                        : NodeSelection.create(tr.doc, tr.mapping.map($cut.pos)))
+        tr.setSelection(
+          textblockAt(after, 'start')
+            ? Selection.findFrom(tr.doc.resolve(tr.mapping.map($cut.pos)), 1)!
+            : NodeSelection.create(tr.doc, tr.mapping.map($cut.pos))
+        )
         dispatch(tr.scrollIntoView())
       }
       return true
@@ -215,10 +282,13 @@ export const joinForward: Command = (state, dispatch, view) => {
 /// commands, to provide a fall-back behavior when the schema doesn't
 /// allow deletion at the selected point.
 export const selectNodeForward: Command = (state, dispatch, view) => {
-  let {$head, empty} = state.selection, $cut: ResolvedPos | null = $head
+  let { $head, empty } = state.selection,
+    $cut: ResolvedPos | null = $head
   if (!empty) return false
   if ($head.parent.isTextblock) {
-    if (view ? !view.endOfTextblock("forward", state) : $head.parentOffset < $head.parent.content.size)
+    if (
+      view ? !view.endOfTextblock('forward', state) : $head.parentOffset < $head.parent.content.size
+    )
       return false
     $cut = findCutAfter($head)
   }
@@ -230,11 +300,12 @@ export const selectNodeForward: Command = (state, dispatch, view) => {
 }
 
 function findCutAfter($pos: ResolvedPos) {
-  if (!$pos.parent.type.spec.isolating) for (let i = $pos.depth - 1; i >= 0; i--) {
-    let parent = $pos.node(i)
-    if ($pos.index(i) + 1 < parent.childCount) return $pos.doc.resolve($pos.after(i + 1))
-    if (parent.type.spec.isolating) break
-  }
+  if (!$pos.parent.type.spec.isolating)
+    for (let i = $pos.depth - 1; i >= 0; i--) {
+      let parent = $pos.node(i)
+      if ($pos.index(i) + 1 < parent.childCount) return $pos.doc.resolve($pos.after(i + 1))
+      if (parent.type.spec.isolating) break
+    }
   return null
 }
 
@@ -242,7 +313,9 @@ function findCutAfter($pos: ResolvedPos) {
 /// closest ancestor block of the selection that can be joined, with
 /// the sibling above it.
 export const joinUp: Command = (state, dispatch) => {
-  let sel = state.selection, nodeSel = sel instanceof NodeSelection, point
+  let sel = state.selection,
+    nodeSel = sel instanceof NodeSelection,
+    point
   if (nodeSel) {
     if ((sel as NodeSelection).node.isTextblock || !canJoin(state.doc, sel.from)) return false
     point = sel.from
@@ -252,7 +325,10 @@ export const joinUp: Command = (state, dispatch) => {
   }
   if (dispatch) {
     let tr = state.tr.join(point)
-    if (nodeSel) tr.setSelection(NodeSelection.create(tr.doc, point - state.doc.resolve(point).nodeBefore!.nodeSize))
+    if (nodeSel)
+      tr.setSelection(
+        NodeSelection.create(tr.doc, point - state.doc.resolve(point).nodeBefore!.nodeSize)
+      )
     dispatch(tr.scrollIntoView())
   }
   return true
@@ -261,7 +337,8 @@ export const joinUp: Command = (state, dispatch) => {
 /// Join the selected block, or the closest ancestor of the selection
 /// that can be joined, with the sibling after it.
 export const joinDown: Command = (state, dispatch) => {
-  let sel = state.selection, point
+  let sel = state.selection,
+    point
   if (sel instanceof NodeSelection) {
     if (sel.node.isTextblock || !canJoin(state.doc, sel.to)) return false
     point = sel.to
@@ -269,16 +346,16 @@ export const joinDown: Command = (state, dispatch) => {
     point = joinPoint(state.doc, sel.to, 1)
     if (point == null) return false
   }
-  if (dispatch)
-    dispatch(state.tr.join(point).scrollIntoView())
+  if (dispatch) dispatch(state.tr.join(point).scrollIntoView())
   return true
 }
 
 /// Lift the selected block, or the closest ancestor block of the
 /// selection that can be lifted, out of its parent node.
 export const lift: Command = (state, dispatch) => {
-  let {$from, $to} = state.selection
-  let range = $from.blockRange($to), target = range && liftTarget(range)
+  let { $from, $to } = state.selection
+  let range = $from.blockRange($to),
+    target = range && liftTarget(range)
   if (target == null) return false
   if (dispatch) dispatch(state.tr.lift(range!, target).scrollIntoView())
   return true
@@ -288,15 +365,15 @@ export const lift: Command = (state, dispatch) => {
 /// [`code`](#model.NodeSpec.code) property in its spec, replace the
 /// selection with a newline character.
 export const newlineInCode: Command = (state, dispatch) => {
-  let {$head, $anchor} = state.selection
+  let { $head, $anchor } = state.selection
   if (!$head.parent.type.spec.code || !$head.sameParent($anchor)) return false
-  if (dispatch) dispatch(state.tr.insertText("\n").scrollIntoView())
+  if (dispatch) dispatch(state.tr.insertText('\n').scrollIntoView())
   return true
 }
 
 function defaultBlockAt(match: ContentMatch) {
   for (let i = 0; i < match.edgeCount; i++) {
-    let {type} = match.edge(i)
+    let { type } = match.edge(i)
     if (type.isTextblock && !type.hasRequiredAttrs()) return type
   }
   return null
@@ -306,12 +383,15 @@ function defaultBlockAt(match: ContentMatch) {
 /// [`code`](#model.NodeSpec.code) property in its spec, create a
 /// default block after the code block, and move the cursor there.
 export const exitCode: Command = (state, dispatch) => {
-  let {$head, $anchor} = state.selection
+  let { $head, $anchor } = state.selection
   if (!$head.parent.type.spec.code || !$head.sameParent($anchor)) return false
-  let above = $head.node(-1), after = $head.indexAfter(-1), type = defaultBlockAt(above.contentMatchAt(after))
+  let above = $head.node(-1),
+    after = $head.indexAfter(-1),
+    type = defaultBlockAt(above.contentMatchAt(after))
   if (!type || !above.canReplaceWith(after, after, type)) return false
   if (dispatch) {
-    let pos = $head.after(), tr = state.tr.replaceWith(pos, pos, type.createAndFill()!)
+    let pos = $head.after(),
+      tr = state.tr.replaceWith(pos, pos, type.createAndFill()!)
     tr.setSelection(Selection.near(tr.doc.resolve(pos), 1))
     dispatch(tr.scrollIntoView())
   }
@@ -321,8 +401,10 @@ export const exitCode: Command = (state, dispatch) => {
 /// If a block node is selected, create an empty paragraph before (if
 /// it is its parent's first child) or after it.
 export const createParagraphNear: Command = (state, dispatch) => {
-  let sel = state.selection, {$from, $to} = sel
-  if (sel instanceof AllSelection || $from.parent.inlineContent || $to.parent.inlineContent) return false
+  let sel = state.selection,
+    { $from, $to } = sel
+  if (sel instanceof AllSelection || $from.parent.inlineContent || $to.parent.inlineContent)
+    return false
   let type = defaultBlockAt($to.parent.contentMatchAt($to.indexAfter()))
   if (!type || !type.isTextblock) return false
   if (dispatch) {
@@ -337,7 +419,7 @@ export const createParagraphNear: Command = (state, dispatch) => {
 /// If the cursor is in an empty textblock that can be lifted, lift the
 /// block.
 export const liftEmptyBlock: Command = (state, dispatch) => {
-  let {$cursor} = state.selection as TextSelection
+  let { $cursor } = state.selection as TextSelection
   if (!$cursor || $cursor.parent.content.size) return false
   if ($cursor.depth > 1 && $cursor.after() != $cursor.end(-1)) {
     let before = $cursor.before()
@@ -346,7 +428,8 @@ export const liftEmptyBlock: Command = (state, dispatch) => {
       return true
     }
   }
-  let range = $cursor.blockRange(), target = range && liftTarget(range)
+  let range = $cursor.blockRange(),
+    target = range && liftTarget(range)
   if (target == null) return false
   if (dispatch) dispatch(state.tr.lift(range!, target).scrollIntoView())
   return true
@@ -354,9 +437,11 @@ export const liftEmptyBlock: Command = (state, dispatch) => {
 
 /// Create a variant of [`splitBlock`](#commands.splitBlock) that uses
 /// a custom function to determine the type of the newly split off block.
-export function splitBlockAs(splitNode?: (node: Node, atEnd: boolean) => {type: NodeType, attrs?: Attrs} | null): Command {
+export function splitBlockAs(
+  splitNode?: (node: Node, atEnd: boolean) => { type: NodeType; attrs?: Attrs } | null
+): Command {
   return (state, dispatch) => {
-    let {$from, $to} = state.selection
+    let { $from, $to } = state.selection
     if (state.selection instanceof NodeSelection && state.selection.node.isBlock) {
       if (!$from.parentOffset || !canSplit(state.doc, $from.pos)) return false
       if (dispatch) dispatch(state.tr.split($from.pos).scrollIntoView())
@@ -368,19 +453,28 @@ export function splitBlockAs(splitNode?: (node: Node, atEnd: boolean) => {type: 
     if (dispatch) {
       let atEnd = $to.parentOffset == $to.parent.content.size
       let tr = state.tr
-      if (state.selection instanceof TextSelection || state.selection instanceof AllSelection) tr.deleteSelection()
-      let deflt = $from.depth == 0 ? null : defaultBlockAt($from.node(-1).contentMatchAt($from.indexAfter(-1)))
+      if (state.selection instanceof TextSelection || state.selection instanceof AllSelection)
+        tr.deleteSelection()
+      let deflt =
+        $from.depth == 0
+          ? null
+          : defaultBlockAt($from.node(-1).contentMatchAt($from.indexAfter(-1)))
       let splitType = splitNode && splitNode($to.parent, atEnd)
-      let types = splitType ? [splitType] : atEnd && deflt ? [{type: deflt}] : undefined
+      let types = splitType ? [splitType] : atEnd && deflt ? [{ type: deflt }] : undefined
       let can = canSplit(tr.doc, tr.mapping.map($from.pos), 1, types)
-      if (!types && !can && canSplit(tr.doc, tr.mapping.map($from.pos), 1, deflt ? [{type: deflt}] : undefined)) {
-        if (deflt) types = [{type: deflt}]
+      if (
+        !types &&
+        !can &&
+        canSplit(tr.doc, tr.mapping.map($from.pos), 1, deflt ? [{ type: deflt }] : undefined)
+      ) {
+        if (deflt) types = [{ type: deflt }]
         can = true
       }
       if (can) {
         tr.split(tr.mapping.map($from.pos), 1, types)
         if (!atEnd && !$from.parentOffset && $from.parent.type != deflt) {
-          let first = tr.mapping.map($from.before()), $first = tr.doc.resolve(first)
+          let first = tr.mapping.map($from.before()),
+            $first = tr.doc.resolve(first)
           if (deflt && $from.node(-1).canReplaceWith($first.index(), $first.index() + 1, deflt))
             tr.setNodeMarkup(tr.mapping.map($from.before()), deflt)
         }
@@ -398,17 +492,23 @@ export const splitBlock: Command = splitBlockAs()
 /// Acts like [`splitBlock`](#commands.splitBlock), but without
 /// resetting the set of active marks at the cursor.
 export const splitBlockKeepMarks: Command = (state, dispatch) => {
-  return splitBlock(state, dispatch && (tr => {
-    let marks = state.storedMarks || (state.selection.$to.parentOffset && state.selection.$from.marks())
-    if (marks) tr.ensureMarks(marks)
-    dispatch(tr)
-  }))
+  return splitBlock(
+    state,
+    dispatch &&
+      (tr => {
+        let marks =
+          state.storedMarks || (state.selection.$to.parentOffset && state.selection.$from.marks())
+        if (marks) tr.ensureMarks(marks)
+        dispatch(tr)
+      })
+  )
 }
 
 /// Move the selection to the node wrapping the current selection, if
 /// any. (Will not select the document node.)
 export const selectParentNode: Command = (state, dispatch) => {
-  let {$from, to} = state.selection, pos
+  let { $from, to } = state.selection,
+    pos
   let same = $from.sharedDepth(to)
   if (same == 0) return false
   pos = $from.before(same)
@@ -422,38 +522,69 @@ export const selectAll: Command = (state, dispatch) => {
   return true
 }
 
-function joinMaybeClear(state: EditorState, $pos: ResolvedPos, dispatch: ((tr: Transaction) => void) | undefined) {
-  let before = $pos.nodeBefore, after = $pos.nodeAfter, index = $pos.index()
+function joinMaybeClear(
+  state: EditorState,
+  $pos: ResolvedPos,
+  dispatch: ((tr: Transaction) => void) | undefined
+) {
+  let before = $pos.nodeBefore,
+    after = $pos.nodeAfter,
+    index = $pos.index()
   if (!before || !after || !before.type.compatibleContent(after.type)) return false
   if (!before.content.size && $pos.parent.canReplace(index - 1, index)) {
     if (dispatch) dispatch(state.tr.delete($pos.pos - before.nodeSize, $pos.pos).scrollIntoView())
     return true
   }
-  if (!$pos.parent.canReplace(index, index + 1) || !(after.isTextblock || canJoin(state.doc, $pos.pos)))
+  if (
+    !$pos.parent.canReplace(index, index + 1) ||
+    !(after.isTextblock || canJoin(state.doc, $pos.pos))
+  )
     return false
   if (dispatch)
-    dispatch(state.tr
-             .clearIncompatible($pos.pos, before.type, before.contentMatchAt(before.childCount))
-             .join($pos.pos)
-             .scrollIntoView())
+    dispatch(
+      state.tr
+        .clearIncompatible($pos.pos, before.type, before.contentMatchAt(before.childCount))
+        .join($pos.pos)
+        .scrollIntoView()
+    )
   return true
 }
 
-function deleteBarrier(state: EditorState, $cut: ResolvedPos, dispatch: ((tr: Transaction) => void) | undefined, dir: number) {
-  let before = $cut.nodeBefore!, after = $cut.nodeAfter!, conn, match
+function deleteBarrier(
+  state: EditorState,
+  $cut: ResolvedPos,
+  dispatch: ((tr: Transaction) => void) | undefined,
+  dir: number
+) {
+  let before = $cut.nodeBefore!,
+    after = $cut.nodeAfter!,
+    conn,
+    match
   let isolated = before.type.spec.isolating || after.type.spec.isolating
   if (!isolated && joinMaybeClear(state, $cut, dispatch)) return true
 
   let canDelAfter = !isolated && $cut.parent.canReplace($cut.index(), $cut.index() + 1)
-  if (canDelAfter &&
-      (conn = (match = before.contentMatchAt(before.childCount)).findWrapping(after.type)) &&
-      match.matchType(conn[0] || after.type)!.validEnd) {
+  if (
+    canDelAfter &&
+    (conn = (match = before.contentMatchAt(before.childCount)).findWrapping(after.type)) &&
+    match.matchType(conn[0] || after.type)!.validEnd
+  ) {
     if (dispatch) {
-      let end = $cut.pos + after.nodeSize, wrap = Fragment.empty
-      for (let i = conn.length - 1; i >= 0; i--)
-        wrap = Fragment.from(conn[i].create(null, wrap))
+      let end = $cut.pos + after.nodeSize,
+        wrap = Fragment.empty
+      for (let i = conn.length - 1; i >= 0; i--) wrap = Fragment.from(conn[i].create(null, wrap))
       wrap = Fragment.from(before.copy(wrap))
-      let tr = state.tr.step(new ReplaceAroundStep($cut.pos - 1, end, $cut.pos, end, new Slice(wrap, 1, 0), conn.length, true))
+      let tr = state.tr.step(
+        new ReplaceAroundStep(
+          $cut.pos - 1,
+          end,
+          $cut.pos,
+          end,
+          new Slice(wrap, 1, 0),
+          conn.length,
+          true
+        )
+      )
       let joinAt = end + 2 * conn.length
       if (canJoin(tr.doc, joinAt)) tr.join(joinAt)
       dispatch(tr.scrollIntoView())
@@ -461,29 +592,41 @@ function deleteBarrier(state: EditorState, $cut: ResolvedPos, dispatch: ((tr: Tr
     return true
   }
 
-  let selAfter = after.type.spec.isolating || (dir > 0 && isolated) ? null : Selection.findFrom($cut, 1)
-  let range = selAfter && selAfter.$from.blockRange(selAfter.$to), target = range && liftTarget(range)
+  let selAfter =
+    after.type.spec.isolating || (dir > 0 && isolated) ? null : Selection.findFrom($cut, 1)
+  let range = selAfter && selAfter.$from.blockRange(selAfter.$to),
+    target = range && liftTarget(range)
   if (target != null && target >= $cut.depth) {
     if (dispatch) dispatch(state.tr.lift(range!, target).scrollIntoView())
     return true
   }
 
-  if (canDelAfter && textblockAt(after, "start", true) && textblockAt(before, "end")) {
-    let at = before, wrap = []
+  if (canDelAfter && textblockAt(after, 'start', true) && textblockAt(before, 'end')) {
+    let at = before,
+      wrap = []
     for (;;) {
       wrap.push(at)
       if (at.isTextblock) break
       at = at.lastChild!
     }
-    let afterText = after, afterDepth = 1
+    let afterText = after,
+      afterDepth = 1
     for (; !afterText.isTextblock; afterText = afterText.firstChild!) afterDepth++
     if (at.canReplace(at.childCount, at.childCount, afterText.content)) {
       if (dispatch) {
         let end = Fragment.empty
         for (let i = wrap.length - 1; i >= 0; i--) end = Fragment.from(wrap[i].copy(end))
-        let tr = state.tr.step(new ReplaceAroundStep($cut.pos - wrap.length, $cut.pos + after.nodeSize,
-                                                     $cut.pos + afterDepth, $cut.pos + after.nodeSize - afterDepth,
-                                                     new Slice(end, wrap.length, 0), 0, true))
+        let tr = state.tr.step(
+          new ReplaceAroundStep(
+            $cut.pos - wrap.length,
+            $cut.pos + after.nodeSize,
+            $cut.pos + afterDepth,
+            $cut.pos + after.nodeSize - afterDepth,
+            new Slice(end, wrap.length, 0),
+            0,
+            true
+          )
+        )
         dispatch(tr.scrollIntoView())
       }
       return true
@@ -494,8 +637,9 @@ function deleteBarrier(state: EditorState, $cut: ResolvedPos, dispatch: ((tr: Tr
 }
 
 function selectTextblockSide(side: number): Command {
-  return function(state, dispatch) {
-    let sel = state.selection, $pos = side < 0 ? sel.$from : sel.$to
+  return function (state, dispatch) {
+    let sel = state.selection,
+      $pos = side < 0 ? sel.$from : sel.$to
     let depth = $pos.depth
     while ($pos.node(depth).isInline) {
       if (!depth) return false
@@ -503,8 +647,11 @@ function selectTextblockSide(side: number): Command {
     }
     if (!$pos.node(depth).isTextblock) return false
     if (dispatch)
-      dispatch(state.tr.setSelection(TextSelection.create(
-        state.doc, side < 0 ? $pos.start(depth) : $pos.end(depth))))
+      dispatch(
+        state.tr.setSelection(
+          TextSelection.create(state.doc, side < 0 ? $pos.start(depth) : $pos.end(depth))
+        )
+      )
     return true
   }
 }
@@ -520,9 +667,10 @@ export const selectTextblockEnd = selectTextblockSide(1)
 /// Wrap the selection in a node of the given type with the given
 /// attributes.
 export function wrapIn(nodeType: NodeType, attrs: Attrs | null = null): Command {
-  return function(state, dispatch) {
-    let {$from, $to} = state.selection
-    let range = $from.blockRange($to), wrapping = range && findWrapping(range, nodeType, attrs)
+  return function (state, dispatch) {
+    let { $from, $to } = state.selection
+    let range = $from.blockRange($to),
+      wrapping = range && findWrapping(range, nodeType, attrs)
     if (!wrapping) return false
     if (dispatch) dispatch(state.tr.wrap(range!, wrapping).scrollIntoView())
     return true
@@ -532,17 +680,21 @@ export function wrapIn(nodeType: NodeType, attrs: Attrs | null = null): Command 
 /// Returns a command that tries to set the selected textblocks to the
 /// given node type with the given attributes.
 export function setBlockType(nodeType: NodeType, attrs: Attrs | null = null): Command {
-  return function(state, dispatch) {
+  return function (state, dispatch) {
     let applicable = false
     for (let i = 0; i < state.selection.ranges.length && !applicable; i++) {
-      let {$from: {pos: from}, $to: {pos: to}} = state.selection.ranges[i]
+      let {
+        $from: { pos: from },
+        $to: { pos: to }
+      } = state.selection.ranges[i]
       state.doc.nodesBetween(from, to, (node, pos) => {
         if (applicable) return false
         if (!node.isTextblock || node.hasMarkup(nodeType, attrs)) return
         if (node.type == nodeType) {
           applicable = true
         } else {
-          let $pos = state.doc.resolve(pos), index = $pos.index()
+          let $pos = state.doc.resolve(pos),
+            index = $pos.index()
           applicable = $pos.parent.canReplaceWith(index, index + 1, nodeType)
         }
       })
@@ -551,7 +703,10 @@ export function setBlockType(nodeType: NodeType, attrs: Attrs | null = null): Co
     if (dispatch) {
       let tr = state.tr
       for (let i = 0; i < state.selection.ranges.length; i++) {
-        let {$from: {pos: from}, $to: {pos: to}} = state.selection.ranges[i]
+        let {
+          $from: { pos: from },
+          $to: { pos: to }
+        } = state.selection.ranges[i]
         tr.setBlockType(from, to, nodeType, attrs)
       }
       dispatch(tr.scrollIntoView())
@@ -562,7 +717,7 @@ export function setBlockType(nodeType: NodeType, attrs: Attrs | null = null): Co
 
 function markApplies(doc: Node, ranges: readonly SelectionRange[], type: MarkType) {
   for (let i = 0; i < ranges.length; i++) {
-    let {$from, $to} = ranges[i]
+    let { $from, $to } = ranges[i]
     let can = $from.depth == 0 ? doc.inlineContent && doc.type.allowsMarkType(type) : false
     doc.nodesBetween($from.pos, $to.pos, node => {
       if (can) return false
@@ -580,24 +735,28 @@ function markApplies(doc: Node, ranges: readonly SelectionRange[], type: MarkTyp
 /// selection is empty, this applies to the [stored
 /// marks](#state.EditorState.storedMarks) instead of a range of the
 /// document.
-export function toggleMark(markType: MarkType, attrs: Attrs | null = null, options?: {
-  /// Controls whether, when part of the selected range has the mark
-  /// already and part doesn't, the mark is removed (`true`, the
-  /// default) or added (`false`).
-  removeWhenPresent: boolean
-}): Command {
+export function toggleMark(
+  markType: MarkType,
+  attrs: Attrs | null = null,
+  options?: {
+    /// Controls whether, when part of the selected range has the mark
+    /// already and part doesn't, the mark is removed (`true`, the
+    /// default) or added (`false`).
+    removeWhenPresent: boolean
+  }
+): Command {
   let removeWhenPresent = (options && options.removeWhenPresent) !== false
-  return function(state, dispatch) {
-    let {empty, $cursor, ranges} = state.selection as TextSelection
+  return function (state, dispatch) {
+    let { empty, $cursor, ranges } = state.selection as TextSelection
     if ((empty && !$cursor) || !markApplies(state.doc, ranges, markType)) return false
     if (dispatch) {
       if ($cursor) {
         if (markType.isInSet(state.storedMarks || $cursor.marks()))
           dispatch(state.tr.removeStoredMark(markType))
-        else
-          dispatch(state.tr.addStoredMark(markType.create(attrs)))
+        else dispatch(state.tr.addStoredMark(markType.create(attrs)))
       } else {
-        let add, tr = state.tr
+        let add,
+          tr = state.tr
         if (removeWhenPresent) {
           add = !ranges.some(r => state.doc.rangeHasMark(r.$from.pos, r.$to.pos, markType))
         } else {
@@ -605,22 +764,38 @@ export function toggleMark(markType: MarkType, attrs: Attrs | null = null, optio
             let missing = false
             tr.doc.nodesBetween(r.$from.pos, r.$to.pos, (node, pos, parent) => {
               if (missing) return false
-              missing = !markType.isInSet(node.marks) && !!parent && parent.type.allowsMarkType(markType) &&
-                !(node.isText && /^\s*$/.test(node.textBetween(Math.max(0, r.$from.pos - pos),
-                                                               Math.min(node.nodeSize, r.$to.pos - pos))))
+              missing =
+                !markType.isInSet(node.marks) &&
+                !!parent &&
+                parent.type.allowsMarkType(markType) &&
+                !(
+                  node.isText &&
+                  /^\s*$/.test(
+                    node.textBetween(
+                      Math.max(0, r.$from.pos - pos),
+                      Math.min(node.nodeSize, r.$to.pos - pos)
+                    )
+                  )
+                )
             })
             return !missing
           })
         }
         for (let i = 0; i < ranges.length; i++) {
-          let {$from, $to} = ranges[i]
+          let { $from, $to } = ranges[i]
           if (!add) {
             tr.removeMark($from.pos, $to.pos, markType)
           } else {
-            let from = $from.pos, to = $to.pos, start = $from.nodeAfter, end = $to.nodeBefore
+            let from = $from.pos,
+              to = $to.pos,
+              start = $from.nodeAfter,
+              end = $to.nodeBefore
             let spaceStart = start && start.isText ? /^\s*/.exec(start.text!)![0].length : 0
             let spaceEnd = end && end.isText ? /\s*$/.exec(end.text!)![0].length : 0
-            if (from + spaceStart < to) { from += spaceStart; to -= spaceEnd }
+            if (from + spaceStart < to) {
+              from += spaceStart
+              to -= spaceEnd
+            }
             tr.addMark(from, to, markType.create(attrs))
           }
         }
@@ -631,15 +806,17 @@ export function toggleMark(markType: MarkType, attrs: Attrs | null = null, optio
   }
 }
 
-function wrapDispatchForJoin(dispatch: (tr: Transaction) => void, isJoinable: (a: Node, b: Node) => boolean) {
+function wrapDispatchForJoin(
+  dispatch: (tr: Transaction) => void,
+  isJoinable: (a: Node, b: Node) => boolean
+) {
   return (tr: Transaction) => {
     if (!tr.isGeneric) return dispatch(tr)
 
     let ranges: number[] = []
     for (let i = 0; i < tr.mapping.maps.length; i++) {
       let map = tr.mapping.maps[i]
-      for (let j = 0; j < ranges.length; j++)
-        ranges[j] = map.map(ranges[j])
+      for (let j = 0; j < ranges.length; j++) ranges[j] = map.map(ranges[j])
       map.forEach((_s, _e, from, to) => ranges.push(from, to))
     }
 
@@ -647,15 +824,17 @@ function wrapDispatchForJoin(dispatch: (tr: Transaction) => void, isJoinable: (a
     // by checking all node boundaries in their parent nodes.
     let joinable = []
     for (let i = 0; i < ranges.length; i += 2) {
-      let from = ranges[i], to = ranges[i + 1]
-      let $from = tr.doc.resolve(from), depth = $from.sharedDepth(to), parent = $from.node(depth)
+      let from = ranges[i],
+        to = ranges[i + 1]
+      let $from = tr.doc.resolve(from),
+        depth = $from.sharedDepth(to),
+        parent = $from.node(depth)
       for (let index = $from.indexAfter(depth), pos = $from.after(depth + 1); pos <= to; ++index) {
         let after = parent.maybeChild(index)
         if (!after) break
         if (index && joinable.indexOf(pos) == -1) {
           let before = parent.child(index - 1)
-          if (before.type == after.type && isJoinable(before, after))
-            joinable.push(pos)
+          if (before.type == after.type && isJoinable(before, after)) joinable.push(pos)
         }
         pos += after.nodeSize
       }
@@ -679,17 +858,18 @@ export function autoJoin(
   command: Command,
   isJoinable: ((before: Node, after: Node) => boolean) | readonly string[]
 ): Command {
-  let canJoin = Array.isArray(isJoinable) ? (node: Node) => isJoinable.indexOf(node.type.name) > -1
-    : isJoinable as (a: Node, b: Node) => boolean
-  return (state, dispatch, view) => command(state, dispatch && wrapDispatchForJoin(dispatch, canJoin), view)
+  let canJoin = Array.isArray(isJoinable)
+    ? (node: Node) => isJoinable.indexOf(node.type.name) > -1
+    : (isJoinable as (a: Node, b: Node) => boolean)
+  return (state, dispatch, view) =>
+    command(state, dispatch && wrapDispatchForJoin(dispatch, canJoin), view)
 }
 
 /// Combine a number of command functions into a single function (which
 /// calls them one by one until one returns true).
 export function chainCommands(...commands: readonly Command[]): Command {
-  return function(state, dispatch, view) {
-    for (let i = 0; i < commands.length; i++)
-      if (commands[i](state, dispatch, view)) return true
+  return function (state, dispatch, view) {
+    for (let i = 0; i < commands.length; i++) if (commands[i](state, dispatch, view)) return true
     return false
   }
 }
@@ -707,38 +887,42 @@ let del = chainCommands(deleteSelection, joinForward, selectNodeForward)
 /// * **Delete** and **Mod-Delete** to `deleteSelection`, `joinForward`, `selectNodeForward`
 /// * **Mod-Delete** to `deleteSelection`, `joinForward`, `selectNodeForward`
 /// * **Mod-a** to `selectAll`
-export const pcBaseKeymap: {[key: string]: Command} = {
-  "Enter": chainCommands(newlineInCode, createParagraphNear, liftEmptyBlock, splitBlock),
-  "Mod-Enter": exitCode,
-  "Backspace": backspace,
-  "Mod-Backspace": backspace,
-  "Shift-Backspace": backspace,
-  "Delete": del,
-  "Mod-Delete": del,
-  "Mod-a": selectAll
+export const pcBaseKeymap: { [key: string]: Command } = {
+  Enter: chainCommands(newlineInCode, createParagraphNear, liftEmptyBlock, splitBlock),
+  'Mod-Enter': exitCode,
+  Backspace: backspace,
+  'Mod-Backspace': backspace,
+  'Shift-Backspace': backspace,
+  Delete: del,
+  'Mod-Delete': del,
+  'Mod-a': selectAll
 }
 
 /// A copy of `pcBaseKeymap` that also binds **Ctrl-h** like Backspace,
 /// **Ctrl-d** like Delete, **Alt-Backspace** like Ctrl-Backspace, and
 /// **Ctrl-Alt-Backspace**, **Alt-Delete**, and **Alt-d** like
 /// Ctrl-Delete.
-export const macBaseKeymap: {[key: string]: Command} = {
-  "Ctrl-h": pcBaseKeymap["Backspace"],
-  "Alt-Backspace": pcBaseKeymap["Mod-Backspace"],
-  "Ctrl-d": pcBaseKeymap["Delete"],
-  "Ctrl-Alt-Backspace": pcBaseKeymap["Mod-Delete"],
-  "Alt-Delete": pcBaseKeymap["Mod-Delete"],
-  "Alt-d": pcBaseKeymap["Mod-Delete"],
-  "Ctrl-a": selectTextblockStart,
-  "Ctrl-e": selectTextblockEnd
+export const macBaseKeymap: { [key: string]: Command } = {
+  'Ctrl-h': pcBaseKeymap['Backspace'],
+  'Alt-Backspace': pcBaseKeymap['Mod-Backspace'],
+  'Ctrl-d': pcBaseKeymap['Delete'],
+  'Ctrl-Alt-Backspace': pcBaseKeymap['Mod-Delete'],
+  'Alt-Delete': pcBaseKeymap['Mod-Delete'],
+  'Alt-d': pcBaseKeymap['Mod-Delete'],
+  'Ctrl-a': selectTextblockStart,
+  'Ctrl-e': selectTextblockEnd
 }
 for (let key in pcBaseKeymap) (macBaseKeymap as any)[key] = pcBaseKeymap[key]
 
-const mac = typeof navigator != "undefined" ? /Mac|iP(hone|[oa]d)/.test(navigator.platform)
-          // @ts-ignore
-          : typeof os != "undefined" && os.platform ? os.platform() == "darwin" : false
+const mac =
+  typeof navigator != 'undefined'
+    ? /Mac|iP(hone|[oa]d)/.test(navigator.platform)
+    : // @ts-ignore
+    typeof os != 'undefined' && os.platform
+    ? os.platform() == 'darwin'
+    : false
 
 /// Depending on the detected platform, this will hold
 /// [`pcBasekeymap`](#commands.pcBaseKeymap) or
 /// [`macBaseKeymap`](#commands.macBaseKeymap).
-export const baseKeymap: {[key: string]: Command} = mac ? macBaseKeymap : pcBaseKeymap
+export const baseKeymap: { [key: string]: Command } = mac ? macBaseKeymap : pcBaseKeymap
